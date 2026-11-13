@@ -55,6 +55,7 @@ public final class PingComp extends JavaPlugin implements Listener {
     private boolean pearls, arrows, potions, hitGrace;
     private double fwdMult, capPearl, capArrow, capPotion, graceMax, bufferScale;
     private int trackedTicks, maxBufferTicks;
+    private boolean debug;
     private final Set<Material> consumables = EnumSet.noneOf(Material.class);
 
     // ---- temporary state (RAM only, cleaned on quit / hit / death / disable) ----
@@ -92,7 +93,8 @@ public final class PingComp extends JavaPlugin implements Listener {
         graceMax = c.getDouble("projectiles.hit_grace.max_blocks", 0.35);
         trackedTicks = c.getInt("projectiles.hit_grace.max_tracked_ticks", 100);
         bufferScale = c.getDouble("consumables.buffer_scale", 1.0);
-        maxBufferTicks = Math.max(1, Math.min(3, c.getInt("consumables.max_buffer_ticks", 3)));
+        maxBufferTicks = Math.max(1, Math.min(10, c.getInt("consumables.max_buffer_ticks", 3)));
+        debug = c.getBoolean("consumables.debug", false);
         consumables.clear();
         for (String s : c.getStringList("consumables.items")) {
             Material m = Material.matchMaterial(s);
@@ -246,25 +248,34 @@ public final class PingComp extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.NORMAL)
     public void onStopUsing(PlayerStopUsingItemEvent e) {
         Player p = e.getPlayer();
-        double eff = effPing(p);
-        if (eff < 0) return;
-
         ItemStack item = e.getItem();
         if (!consumables.contains(item.getType())) return;
 
-        int remaining = p.getItemUseRemainingTime();
-        if (remaining <= 0) return;
+        double eff = effPing(p);
+        if (eff < 0) {
+            dbg(p, "ignored: ping " + p.getPing() + "ms is under min_ping " + minPing);
+            return;
+        }
 
+        int remaining = p.getItemUseRemainingTime();
         int grace = (int) Math.ceil(eff / 50.0 * bufferScale);
         grace = Math.max(1, Math.min(maxBufferTicks, grace));
-        if (remaining > grace) return; // genuine early release -> vanilla cancel
+        dbg(p, "released " + item.getType() + " | ping=" + p.getPing() + "ms | ticks left=" + remaining + " | grace=" + grace);
+
+        if (remaining <= 0) { dbg(p, "-> nothing to do (already finished)"); return; }
+        if (remaining > grace) { dbg(p, "-> too early, vanilla cancel"); return; }
 
         int now = Bukkit.getCurrentTick();
         Integer last = lastFinish.get(p.getUniqueId());
-        if (last != null && now - last <= 3) return; // anti double-eat
+        if (last != null && now - last <= 3) { dbg(p, "-> blocked (double-eat guard)"); return; }
         lastFinish.put(p.getUniqueId(), now);
 
+        dbg(p, "-> COMPLETING item now");
         p.completeUsingActiveItem(); // fires PlayerItemConsumeEvent normally
+    }
+
+    private void dbg(Player p, String msg) {
+        if (debug) p.sendMessage("[PingComp] " + msg);
     }
 
     // ===================== CLEANUP =====================
