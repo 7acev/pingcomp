@@ -1,0 +1,5 @@
+name: PingComp
+version: 1.0.0
+main: dev.pingcomp.PingComp
+api-version: '1.21'
+description: Capped, ping-scaled projectile and consumable compensation for high-ping PvP players.

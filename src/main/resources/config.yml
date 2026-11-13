@@ -1,0 +1,35 @@
+# ===================== PingComp options =====================
+# Players below min_ping are 100% vanilla. Ping is clamped to max_ping.
+min_ping: 70
+max_ping: 250
+
+projectiles:
+  ender_pearl: true
+  arrow: true
+  splash_potion: true
+
+  # Blocks of forward offset = projectile speed (blocks/tick) * (effective_ping_ms / 50) * multiplier
+  # effective_ping = min(ping, max_ping) - min_ping
+  forward_multiplier: 0.35
+
+  # Hard caps on forward offset, in blocks (balance guard)
+  max_offset_blocks:
+    ender_pearl: 1.5
+    arrow: 2.0
+    splash_potion: 1.5
+
+  # Hit grace for arrows + splash potions (fast movers / ghost hits)
+  hit_grace:
+    enabled: true
+    max_blocks: 0.35      # grace at max_ping, scales linearly from 0 at min_ping
+    max_tracked_ticks: 100
+
+consumables:
+  items:
+    - GOLDEN_APPLE
+    - ENCHANTED_GOLDEN_APPLE
+    - POTION
+    - CHORUS_FRUIT
+  # grace ticks = ceil(effective_ping / 50 * buffer_scale), clamped to 1..max_buffer_ticks
+  buffer_scale: 1.0
+  max_buffer_ticks: 3
